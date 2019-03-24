@@ -23,18 +23,20 @@ In this project, I have implemented algorithms to detect lane lines in images us
 - The main challenge in this project was to how to detect/construct a continuous lane line when the given or marked lane line are dashed.
 - First, we change the images to grayscale (same with videos too as they are a collection of images)
 - This step helps us to find gradients between different pixels.
-- But before calculating gradient we need to smooth image, so we use `cv2.GaussianBlur()` for smoothing of the image as in it finds the average in given kernel size.
+- But before calculating gradient we need to smooth the image, so we use `cv2.GaussianBlur()` for smoothing of the image as in it finds the average in given kernel size.
 - With the help OpenCV library and using its function `cv2.Canny()` we find different dots which satisfies our threshold values for gradients and which comes under our _quadilateral mask_.
 - With those edges with the help of `cv2.HoughLinesP()` we draw lines on the image. This function uses a concept like Hough Transform which is just conversion from image space to Hough space.
 - And in Hough space, we can represent an image in terms of parameters.
 - And while doing so we change our coordinate system to polar coordinate, as the convention system has the problem with vertical lines and how to define its slope.
-- After finetuning the parameter we can get a fairly good lane detection algorithm, which will look something like this:
+- After finetuning the parameter we can get a fairly good lane detection algorithm, which output will look something like this on an image:
  <img src="examples/line-segments-example.jpg" width="380" alt="Combined Image" />
 - But the desired output is this:
  <img src="examples/laneLines_thirdPass.jpg" width="380" alt="Combined Image" />
  
-- So how to get the above desired. The main issue in our input image is this we don't have **enough edges** after calculating the gradient and then finding the edges. Because here the lane markers are **dashed**.
-- One solution to solve this could be that we could fit a line along these detected points which are fairly separated and then extend the line.
+- So how to get the above desired image after processing. The main issue here is that, the desired output needs continuous lane line. But on our roads we have dashed lane lines, so main problem here is to first detect the lane lines and which could be of many different colors like white, yellow and etc. 
+- And we need to find a way to extropolate that dashed lines to a continuous single.
+- So that we can represent or find the drivable area for our self driving car.
+- One solution to solve this could be that we could fit a line along these detected points which are fairly separated and then extend the edges to form a single continuous line.
 - So in my implementation what I've done is collected the pair of points(returned from `cv2.HoughLinesP()`)  and then checked it's the slope and accordingly put it into left line or right line list.
 - And after collecting all the point with the help of `np.poliyfit()` I have calculated the best fit line parameters for both left and right lane lines.
 - And then extended the line from two extreme points from the collected points for both right and left lane lines with help of `cv2.drawline()`.
