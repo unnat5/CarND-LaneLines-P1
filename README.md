@@ -6,51 +6,43 @@
 Overview
 ---
 
-When we drive, we use our eyes to decide where to go.  The lines on the road that show us where the lanes are act as our constant reference for where to steer the vehicle.  Naturally, one of the first things we would like to do in developing a self-driving car is to automatically detect lane lines using an algorithm.
+When we drive, we use our eyes to decide where to go.  The lines on the road that show us where the lanes act as our constant reference for where to steer the vehicle.  Naturally, one of the first things we would like to do in developing a self-driving car is to automatically detect lane lines using an algorithm.
 
-In this project you will detect lane lines in images using Python and OpenCV.  OpenCV means "Open-Source Computer Vision", which is a package that has many useful tools for analyzing images.  
-
-To complete the project, two files will be submitted: a file containing project code and a file containing a brief write up explaining your solution. We have included template files to be used both for the [code](https://github.com/udacity/CarND-LaneLines-P1/blob/master/P1.ipynb) and the [writeup](https://github.com/udacity/CarND-LaneLines-P1/blob/master/writeup_template.md).The code file is called P1.ipynb and the writeup template is writeup_template.md 
-
-To meet specifications in the project, take a look at the requirements in the [project rubric](https://review.udacity.com/#!/rubrics/322/view)
+In this project, I have implemented algorithms to detect lane lines in images using Python and OpenCV. OpenCV means "Open-Source Computer Vision", which is a package that has many useful tools for analyzing images.  
 
 
-Creating a Great Writeup
----
-For this project, a great writeup should provide a detailed response to the "Reflection" section of the [project rubric](https://review.udacity.com/#!/rubrics/322/view). There are three parts to the reflection:
 
-1. Describe the pipeline
-
-2. Identify any shortcomings
-
-3. Suggest possible improvements
-
-We encourage using images in your writeup to demonstrate how your pipeline works.  
-
-All that said, please be concise!  We're not looking for you to write a book here: just a brief description.
-
-You're not required to use markdown for your writeup.  If you use another method please just submit a pdf of your writeup. Here is a link to a [writeup template file](https://github.com/udacity/CarND-LaneLines-P1/blob/master/writeup_template.md). 
+## Working example of Lane detection
+![Alt Text](https://github.com/unnat5/CarND-LaneLines-P1/blob/master/laneDetection.gif)
 
 
-The Project
----
 
-## If you have already installed the [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) you should be good to go!   If not, you should install the starter kit to get started on this project. ##
 
-**Step 1:** Set up the [CarND Term1 Starter Kit](https://classroom.udacity.com/nanodegrees/nd013/parts/fbf77062-5703-404e-b60c-95b78b2f3f9e/modules/83ec35ee-1e02-48a5-bdb7-d244bd47c2dc/lessons/8c82408b-a217-4d09-b81d-1bda4c6380ef/concepts/4f1870e0-3849-43e4-b670-12e6f2d4b7a7) if you haven't already.
+## Pipeline 
+- This pipeline describes steps taken to detect lane lines.
+- The main challenge in this project was to how to detect/construct a continuous lane line when the given or marked lane line are dashed.
+- First, we change the images to grayscale (same with videos too as they are a collection of images)
+- This step helps us to find gradients between different pixels.
+- But before calculating gradient we need to smooth image, so we use `cv2.GaussianBlur()` for smoothing of the image as in it finds the average in given kernel size.
+- With the help OpenCV library and using its function `cv2.Canny()` we find different dots which satisfies our threshold values for gradients and which comes under our _quadilateral mask_.
+- With those edges with the help of `cv2.HoughLinesP()` we draw lines on the image. This function uses a concept like Hough Transform which is just conversion from image space to Hough space.
+- And in Hough space, we can represent an image in terms of parameters.
+- And while doing so we change our coordinate system to polar coordinate, as the convention system has the problem with vertical lines and how to define its slope.
+- After finetuning the parameter we can get a fairly good lane detection algorithm, which will look something like this:
+ <img src="examples/line-segments-example.jpg" width="380" alt="Combined Image" />
+- But the desired output is this:
+ <img src="examples/laneLines_thirdPass.jpg" width="380" alt="Combined Image" />
+ 
+- So how to get the above desired. The main issue in our input image is this we don't have **enough edges** after calculating the gradient and then finding the edges. Because here the lane markers are **dashed**.
+- One solution to solve this could be that we could fit a line along these detected points which are fairly separated and then extend the line.
+- So in my implementation what I've done is collected the pair of points(returned from `cv2.HoughLinesP()`)  and then checked it's the slope and accordingly put it into left line or right line list.
+- And after collecting all the point with the help of `np.poliyfit()` I have calculated the best fit line parameters for both left and right lane lines.
+- And then extended the line from two extreme points from the collected points for both right and left lane lines with help of `cv2.drawline()`.
 
-**Step 2:** Open the code in a Jupyter Notebook
 
-You will complete the project code in a Jupyter notebook.  If you are unfamiliar with Jupyter Notebooks, check out [Udacity's free course on Anaconda and Jupyter Notebooks](https://classroom.udacity.com/courses/ud1111) to get started.
-
-Jupyter is an Ipython notebook where you can run blocks of code and see results interactively.  All the code for this project is contained in a Jupyter notebook. To start Jupyter in your browser, use terminal to navigate to your project directory and then run the following command at the terminal prompt (be sure you've activated your Python 3 carnd-term1 environment as described in the [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) installation instructions!):
-
-`> jupyter notebook`
-
-A browser window will appear showing the contents of the current directory.  Click on the file called "P1.ipynb".  Another browser window will appear displaying the notebook.  Follow the instructions in the notebook to complete the project.  
-
-**Step 3:** Complete the project and submit both the Ipython notebook and the project writeup
-
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
-
+### Future Work and Possible improvements
+- One of the problems which I am facing is this that my same pipeline(or algorithm) should work for different type lanes on which I'm driving it could be right, left or centre lane.
+- So keeping this in my mind my area of interest which is defined by a quadrilateral and it's used as a mask when using CANNY algorithm is **quite large** in this implementation.
+- Due to this large area of interest in my CANNY algorithm, it picks outlier points too.
+- Due to these *outlier points* when I'm calculating the parameters for the best-fit line it introduces the error in my calculation and these polyfit algorithms are *very sensitive to outliers*.
+- Future work will be how to exclude and remove these outliers from the calculation while approximating the parameters for the best fit line.
